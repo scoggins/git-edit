@@ -9,7 +9,7 @@ PAGER=${PAGER:=$(which less)}
 GIT=$(which git 3>/dev/null)
 
 # Check if git is installed. If it's not, or it's not in our path invoke editor as usual.
-[ "$GIT" = "" ] && exec $EDITOR "$@" && exit
+[ "$GIT" = "" ] && exec "$EDITOR" "$@" && exit
 
 trap
 
