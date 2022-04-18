@@ -2,8 +2,8 @@
 PATH=/bin:/sbin:/usr/local/bin:/usr/local/sbin:${PATH}
 
 # Default the EDITOR to vi and the PAGER to less
-EDITOR=${EDITOR:=`which vi`}
-PAGER=${PAGER:=`which less`}
+EDITOR=${EDITOR:=$(which vi)}
+PAGER=${PAGER:=$(which less)}
 
 # Find the location of the git binary
 GIT=$(which git 3>/dev/null)
@@ -14,15 +14,15 @@ GIT=$(which git 3>/dev/null)
 trap
 
 read_yn() { # Return 0 for yes, 1 for no
-	read yn
-	[ "$yn" = "y" -o "$yn" = "Y" ] && return 0
-	[ "$yn" = "n" -o "$yn" = "N" ] && return 1
-	[ "$1" = "y" -o "$1" = "Y" -a "$yn" = "" ] && return 0
-	[ "$1" = "n" -o "$1" = "N" -a "$yn" = "" ] && return 1
+	read -r yn
+	[ "$yn" = "y" ] || [ "$yn" = "Y" ] && return 0
+	[ "$yn" = "n" ] || [ "$yn" = "N" ] && return 1
+	[ "$1" = "y" ] || [ "$1" = "Y" ] && [ "$yn" = "" ] && return 0
+	[ "$1" = "n" ] || [ "$1" = "N" ] && [ "$yn" = "" ] && return 1
  }
 
 is_git_file() {
-	GITSTATUS=`$GIT status -s $1 | grep -c "??"`
+	GITSTATUS=$($GIT status -s "$1" | grep -c "??")
 	[ "$GITSTATUS" -ne "0" ] && return 1 # False it isn't a git file!
 	return 0 # True we have git!
 }
@@ -43,21 +43,21 @@ then
 fi
 
 # Check to see if default git info is set, if not set it.
-GITUSERNAME=`$GIT config user.name`
+GITUSERNAME=$($GIT config user.name)
 if [ "$GITUSERNAME" = "" ]
 then
 	echo "It appears you haven't setup git before. Please answer 2 questions so I know who you are!"
 	while :
 	do
 		echo -n "Full Name: "
-		read name
+		read -r name
 		echo -n "Email Address: "
-		read email
+		read -r email
 		echo -n "So you are $name <$email> ? [Y/n] "
 		if read_yn y
 		then
-			$GIT config --global user.name $name
-			$GIT config --global user.email $email
+			$GIT config --global user.name "$name"
+			$GIT config --global user.email "$email"
 			break
 		fi
 	done
@@ -68,11 +68,11 @@ LOCKFILE="$1.lock"
 # Get lock file
 if [ -f "$LOCKFILE" ]
 then
-	LOCKUSER=$(ls -la $LOCKFILE | cut -d" " -f 3)
+	LOCKUSER=$(find "$LOCKFILE" | awk '{print $5}')
 	echo "Lock file exists. Currently being edited by $LOCKUSER trying for 15 second to get the lock..."
 fi
-lockfile -3 -r 5 $LOCKFILE
-if [ "$?" -ne "0" ]
+
+if ! lockfile -3 -r 5 "$LOCKFILE"
 then
 	echo "Unable to lock $1, I believe $LOCKUSER is still editing it!"
 	echo "If they aren't then something went wrong and you might need to rm -f $LOCKFILE"
@@ -81,20 +81,20 @@ fi
 
 trap cleanup SIGTERM SIGINT EXIT
 
-$EDITOR $1
+$EDITOR "$1"
 
-if is_git_file $1
+if is_git_file "$1"
 then
-	CHANGES="$($GIT diff --shortstat $1)"
+	CHANGES="$($GIT diff --shortstat "$1")"
 	if [ "$CHANGES" != "" ]
 	then
 		echo
-		echo $CHANGES
+		echo "$CHANGES"
 		echo
 		echo -n "Would you like to review the changes? [Y/n]: "
 		if read_yn y
 		then
-			git diff $1 | $PAGER
+			git diff "$1" | $PAGER
 		fi
 		echo
 		echo -n "Commit changes? [Y/n]: "
@@ -102,8 +102,8 @@ then
 		then
 			echo
 			echo -n "Commit comment: "
-			read commitmsg
-			git add $1
+			read -r commitmsg
+			git add "$1"
 			git commit -m "$commitmsg"
 		else
 			echo
